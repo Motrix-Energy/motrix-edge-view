@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Nothing here publishes anything. Without this block the job inherits the repository
+# default, which on many repositories is read/write — a write-scoped token handed to every
+# third-party action in the job for no reason any step here needs.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # Otherwise the token is written into .git/config as an http.extraheader and
+          # stays there for the rest of the job, readable by anything that runs in the
+          # workspace afterwards — `npm ci` and every install script it triggers included.
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      # ci, not install: the lockfile is the pin. The version boundary between this repo
+      # and the EMS is a pinned image tag, and it is pins all the way down.
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+      # `npm run build` ends in scripts/check-bundle-size.mjs, which asserts dist/ holds
+      # exactly one file with no external references. That check is not decoration:
+      # vite-plugin-singlefile stops inlining silently past assetsInlineLimit, and the
+      # failure mode is a viewer that 404s the moment someone opens it offline — which is
+      # the only way anyone opens it.
+      - run: npm run build
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: motrix-edge-view-index.html
+          path: dist/index.html
+          if-no-files-found: error

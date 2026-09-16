@@ -1,0 +1,27 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"noUnusedLocals": true,
+		"noUnusedParameters": true,
+		"noFallthroughCasesInSwitch": true,
+		"isolatedModules": true,
+		"skipLibCheck": true,
+		"noEmit": true,
+		"types": ["vite/client"],
+
+		// Legacy decorators, deliberately, and not a style preference: Vite transpiles
+		// TypeScript with esbuild, which does not implement TC39 standard decorators.
+		// Lit supports both flavours, but only this one actually builds here. Changing
+		// either of these two lines breaks every @customElement in src/components/.
+		"experimentalDecorators": true,
+		"useDefineForClassFields": false
+	},
+	// One project, including the build configs. A composite `references` split was tried
+	// and rejected: a referenced project may not set `noEmit`, and this repo never emits
+	// anything from tsc — Vite does the transpiling, tsc is only a checker.
+	"include": ["src", "test", "vite.config.ts", "vitest.config.ts"]
+}

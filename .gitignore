@@ -1,0 +1,27 @@
+node_modules/
+dist/
+coverage/
+.vite/
+*.local
+*.log
+
+.DS_Store
+.idea/
+
+# .claude/launch.json is tracked — it is how a contributor starts the dev server.
+# settings.local.json is machine-specific tooling permissions and is not.
+.claude/settings.local.json
+
+.env
+.env.*
+!.env.example
+
+# test/fixtures/ is deliberately NOT ignored. The golden pair vendored from the EMS repo
+# is the interface between the two repositories; see test/fixtures/README.md.
+#
+# The `*.log` rule above matched auto_toggle/expected/control.log, so the one fixture that
+# is a log never reached a commit: MANIFEST.json listed it, fixtures.test.ts read it, and
+# on every fresh clone both the SHA-256 integrity loop and the control-log rejection test
+# died on ENOENT instead. The check that keeps the two repositories honest ran only on the
+# machine where the untracked file happened to exist.
+!test/fixtures/**/*.log

@@ -1,0 +1,19 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+indent_style = tab
+indent_size = 4
+trim_trailing_whitespace = true
+
+# JSON is deliberately absent here: package.json, tsconfig.json and every config file in this
+# repository indent with tabs, like the TypeScript beside them. Declaring spaces for .json would
+# make an editorconfig-aware editor reformat the first JSON file anyone touches.
+[*.{yml,yaml,md}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false

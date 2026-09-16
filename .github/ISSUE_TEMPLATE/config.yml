@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://motrix-energy.github.io/
+    about: How to run the viewer, what the CSVs mean, and the contributor guides for both repositories.
+  - name: Report a security vulnerability
+    url: https://github.com/Motrix-Energy/motrix-edge-view/security/advisories/new
+    about: Privately, never as a public issue. Read SECURITY.md first for what is in scope.
+  - name: Something wrong in the EMS itself
+    url: https://github.com/Motrix-Energy/motrix-edge/issues
+    about: Connectors, algorithms, storage, the REST API — anything that writes the CSVs rather than reads them.

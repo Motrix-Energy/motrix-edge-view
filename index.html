@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Motrix Edge View</title>
+		<!-- The mark, inlined. vite-plugin-singlefile inlines the bundle but not an icon
+		     file, and scripts/check-bundle-size.mjs fails the build on any non-`data:`
+		     reference — so the favicon arrives as a data URI or not at all. -->
+		<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%20512%20512%22%3E%3Cdefs%3E%3ClinearGradient%20id=%22g%22%20x1=%2214%22%20y1=%220%22%20x2=%22106%22%20y2=%220%22%20gradientUnits=%22userSpaceOnUse%22%3E%3Cstop%20offset=%220%22%20stop-color=%22%232FE6C8%22/%3E%3Cstop%20offset=%221%22%20stop-color=%22%23FFB443%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width=%22512%22%20height=%22512%22%20rx=%22112%22%20fill=%22%230B1E2D%22/%3E%3Cg%20transform=%22translate(87%2087)%20scale(2.82)%22%20fill=%22none%22%20stroke-width=%2210.5%22%20stroke-linecap=%22round%22%20stroke-linejoin=%22round%22%3E%3Cpath%20d=%22M22%2073%2022%2034%2060%2070%2098%2034%2098%2073%22%20stroke=%22url(%23g)%22/%3E%3Ccircle%20cx=%2222%22%20cy=%2288%22%20r=%228%22%20stroke=%22%232FE6C8%22%20stroke-width=%226.5%22/%3E%3Ccircle%20cx=%2298%22%20cy=%2288%22%20r=%228%22%20stroke=%22%23FFB443%22%20stroke-width=%226.5%22/%3E%3C/g%3E%3C/svg%3E" />
+		<style>
+			/* Tokens live on :root, not inside a component, because custom properties are
+			   the one thing that inherits through a shadow boundary. See
+			   src/styles/tokens.css.ts.
+
+			   Every text token clears WCAG AA (4.5:1) against all three backgrounds, and
+			   that constraint is what sets them. The ramp used to run e4e6f0 / 8b8fa3 /
+			   5a5e72, where the muted step reached only 2.3:1 on --bg-tertiary — and it
+			   is real body text in ten components, not decoration. There is no room for a
+			   readable third step below 8b8fa3, which is itself just 4.57:1 at the bottom,
+			   so the ramp moved up a notch instead of the bottom being nudged. Check any
+			   change here with a contrast calculator; the worst case is --bg-tertiary.
+
+			   The Motrix ramp holds that line rather than replacing it: every step below is
+			   the old one re-hued to brand navy, so the worst case is now --text-muted on
+			   --bg-tertiary at 4.82:1 and --accent went from a marginal 4.60:1 to 7.96:1.
+			   That last number is also why primary buttons now carry --bg-primary and not
+			   #fff — white on this accent is 1.6:1, which is not a button.
+
+			   Chart marks are NOT set from these tokens. They sit on --bg-secondary and are a
+			   categorical palette with its own constraints — OKLCH lightness band, chroma
+			   floor, colour-vision separation. See SERIES_COLOURS in charts/motrix-chart-card.ts. */
+			:root {
+				--bg-primary: #0B1E2D;
+				--bg-secondary: #12293A;
+				--bg-tertiary: #1B3648;
+				--bg-hover: #244358;
+				--text-primary: #E6EEF2;
+				--text-secondary: #AFC2CD;
+				--text-muted: #8FA3B0;
+				--accent: #2FE6C8;
+				--success: #97CD86;
+				--warning: #FFD166;
+				--error: #FF8A7A;
+				/* The mark's two nodes, and why these two: a reading comes off a node (teal),
+				   a decision is the dispatch that leaves it (amber). */
+				--reading-color: #2FE6C8;
+				--decision-color: #FFB443;
+				--border: #244358;
+				--font-mono: 'Consolas', 'SF Mono', 'Fira Code', monospace;
+				--font-sans: 'Archivo', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				color-scheme: dark;
+			}
+
+			html,
+			body {
+				height: 100%;
+			}
+
+			body {
+				margin: 0;
+				background: var(--bg-primary);
+				color: var(--text-primary);
+				font-family: var(--font-sans);
+				overflow: hidden;
+			}
+
+			/* Height only. `display` is deliberately NOT set here.
+
+			   A rule in this document that matches the host beats the component's own
+			   `:host` rule, whatever the specificity says — the scoping spec sorts :host
+			   declarations *below* outer-tree ones. So `display: block` here silently
+			   defeated `:host { display: flex; flex-direction: column }` in motrix-app.ts,
+			   which made <main> an ordinary block instead of a flex item. Its
+			   `flex: 1 1 auto; min-height: 0` then did nothing, it grew to the full height
+			   of the timeline (110 000px with a ten-day run loaded) inside a host that is
+			   `overflow: hidden`, and everything below the fold became unreachable: the
+			   timeline's own `overflow: auto` list never received a bounded height to
+			   scroll within.
+
+			   Layout belongs to the component. Anything set here has to be something the
+			   component is content to inherit. */
+			motrix-app {
+				height: 100%;
+			}
+		</style>
+	</head>
+	<body>
+		<motrix-app></motrix-app>
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

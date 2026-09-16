@@ -1,0 +1,21 @@
+.git
+.gitignore
+.github
+.claude
+.idea
+
+# npm ci rebuilds this in the image. Copying the host's tree over a freshly installed one
+# also copies binaries built for the host platform — a build that succeeds and an image
+# that crashes.
+node_modules
+dist
+coverage
+.vite
+
+*.log
+
+# The EMS repo already paid for this lesson: COPY . . bakes whatever is in the build
+# context into a layer, and .gitignore has no bearing on the build context.
+.env
+.env.*
+!.env.example

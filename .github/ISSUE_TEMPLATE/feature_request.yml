@@ -1,0 +1,47 @@
+name: Feature request
+description: Suggest something the viewer should be able to do.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Two constraints shape what can be built here, and it is worth checking your idea against them
+        first — they are not negotiable, and most rejected proposals hit one of them:
+
+        - **The viewer ships as one `index.html` that works offline from `file://`.** No server of its
+          own, no network at runtime, no dynamic imports, no Web Workers, and a hard ceiling on bundle
+          size.
+        - **The viewer is generic.** It knows nothing about specific algorithms, devices or schemas —
+          everything is discovered from the data. A feature that needs to recognise a particular
+          device or algorithm by name cannot be built.
+
+        Read-only is also deliberate: the viewer never writes back to an EMS.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to find out?
+      description: The question you were asking of the data when the viewer got in your way. Not the solution — the situation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What should it do instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What did you do instead?
+      description: The workaround, other tooling, or the thing you gave up on. This is usually the most useful field.
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: Constraints
+      options:
+        - label: This works with a single offline `index.html`, and needs nothing about a specific device or algorithm.
+          required: false

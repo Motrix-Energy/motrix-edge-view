@@ -1,0 +1,104 @@
+name: Release
+
+# A tag is the only trigger. The version boundary with the EMS repo is a pinned tag all the
+# way down, and a release that could fire from a branch push would undermine that.
+on:
+  push:
+    tags: ['v*']
+
+# Every `uses:` is pinned to a full commit SHA, not a tag. A major tag is mutable: whoever
+# controls the action's repository can repoint `v2` at a new commit, and the publish job
+# holds a token that can replace the release asset the README tells people to download and
+# double-click. A SHA is the only reference an upstream cannot move under us.
+#
+# The trailing comment names the tag the SHA was resolved from, so the pin stays readable.
+# `.github/dependabot.yml` opens a PR when one moves, which is the point: the versions still
+# advance, but a human sees the diff. To re-resolve one by hand:
+#
+#   gh api repos/actions/checkout/git/ref/tags/v4 --jq .object.sha
+#
+# All eight resolved to `.object.type == "commit"` (lightweight tags). An annotated tag would
+# report type "tag" and need one more hop through `git/tags/<sha>` to reach the commit.
+
+# No ambient permission. Each job asks for what it needs and nothing else.
+permissions: {}
+
+jobs:
+  # Everything that runs third-party code and the project's own dependencies, with a token
+  # that cannot publish. The same gate CI runs: a tag must not be able to publish something
+  # that would have failed a pull request.
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+      # THE release artefact. The README tells people to download this file and
+      # double-click it, so it is the primary deliverable and the image is the convenience.
+      # Handing it to the publish job as an artifact means the bytes that get published are
+      # the exact bytes the gate above passed.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-index-html
+          path: dist/index.html
+          if-no-files-found: error
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: release-index-html
+          path: dist
+
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          files: dist/index.html
+          generate_release_notes: true
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Derived from the repository rather than hardcoded: GHCR requires a lowercase owner,
+      # and writing one in by hand is how an image ends up published under the wrong name.
+      - id: image
+        run: echo "ref=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          # Never :latest. The compose file in the EMS repo pins an explicit tag, and a
+          # floating tag would silently change what a deployment runs on the next pull.
+          tags: ${{ steps.image.outputs.ref }}:${{ github.ref_name }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}

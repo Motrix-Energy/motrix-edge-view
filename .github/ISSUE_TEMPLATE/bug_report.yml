@@ -1,0 +1,83 @@
+name: Bug report
+description: Something in the viewer does not do what it says it does.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        **Before you paste anything**: this repository is public, and the project carries a
+        [standing rule](https://github.com/Motrix-Energy/motrix-edge-view/blob/main/CONTRIBUTING.md#standing-rule--this-repository-is-public)
+        against publishing anything from a real installation — device names, topics, hostnames,
+        serials, addresses, `config.json` contents. Reduce your example to the shipped vocabulary
+        (`p1_meter`, `shelly_plug`, `pseudo_sensor`, `AutoToggle`) or redact it.
+
+        **Found a security issue?** Do not file it here — see
+        [SECURITY.md](https://github.com/Motrix-Energy/motrix-edge-view/blob/main/SECURITY.md).
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release tag you downloaded, the image tag you ran, or the commit you built.
+      placeholder: v0.1.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: How were you running it?
+      options:
+        - Downloaded index.html, opened from disk (file://)
+        - Container behind nginx, file mode only
+        - Container behind nginx, connected to a live EMS
+        - Dev server (npm run dev)
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Firefox 141 on Windows 11
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened, and what you expected instead
+      description: If a chart or the timeline is involved, say what was on screen — blank, empty, wrong values, wrong times.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you loaded, in what order, and what you clicked.
+      placeholder: |
+        1. Open index.html
+        2. Drag in device_data.csv and algorithm_decisions.csv
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: data
+    attributes:
+      label: The smallest sample that shows it
+      description: >
+        A few CSV rows, a load-report warning code, or a console error. The vendored fixture in
+        `test/fixtures/` is public and always safe to quote. Anything from your own site is not.
+      render: text
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Before submitting
+      options:
+        - label: Nothing above comes from a real installation, or I have redacted it.
+          required: true

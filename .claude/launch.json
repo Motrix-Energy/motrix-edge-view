@@ -1,0 +1,12 @@
+{
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"$comment": "npm run dev, not `npx serve`: a static server does not run Vite's /api proxy, so the live-source probe and every API call would be dead in development. Port 5173 rather than 3000 because the EMS's docker-compose.yml publishes Grafana on 3000, and running both is a live conflict.",
+			"name": "motrix-edge-view",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": ["run", "dev"],
+			"port": 5173
+		}
+	]
+}
