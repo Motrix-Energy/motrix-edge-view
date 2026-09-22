@@ -29,6 +29,7 @@ const WARNING_KEYS: Record<WarningDetail, MessageKey> = {
 	configTooLarge: 'warning.configTooLarge',
 	configDuplicateName: 'warning.configDuplicateName',
 	configDanglingRef: 'warning.configDanglingRef',
+	configVersionDrift: 'warning.configVersionDrift',
 	configTruncated: 'warning.configTruncated',
 	decisionsReset: 'warning.decisionsReset',
 	decisionsGap: 'warning.decisionsGap',

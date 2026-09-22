@@ -125,6 +125,7 @@ export type WarningDetail =
 	| 'configTooLarge'
 	| 'configDuplicateName'
 	| 'configDanglingRef'
+	| 'configVersionDrift'
 	| 'configTruncated';
 
 /**

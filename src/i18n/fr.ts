@@ -308,6 +308,8 @@ export const fr = {
 		'Deux entrées de {section} portent le nom « {name} ». La première est utilisée, comme le fait l’EMS.',
 	'warning.configDanglingRef':
 		'« {name} » fait référence à « {missing} », que cette configuration ne déclare pas.',
+	'warning.configVersionDrift':
+		'Cette configuration déclare la version {declared}, alors que cette visionneuse lit les configurations de version {supported}.x. La version seule n’a rien fait refuser ni masquer : une version majeure est le seul avertissement qu’une configuration donne qu’un champ lu par la visionneuse a pu changer de place, donc un type vide ou un connecteur non résolu ci-dessous peut relever de la version plutôt que de la configuration.',
 	'warning.configTruncated':
 		'Seules les {n} premières entrées ont été lues. Une configuration de cette taille dépasse ce que cette visionneuse est faite pour décrire.',
 	'warning.decisionsReset':

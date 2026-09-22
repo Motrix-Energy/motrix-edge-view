@@ -85,6 +85,18 @@ every untyped key under an algorithm's, which is where a private algorithm's par
 Two tests assert that no credential, host, topic or path can reach the parsed document or the
 rendered DOM. **Do not delete them.**
 
+The declared `version` is the config **document format** — the EMS's `config/version.py` owns that
+meaning, and it is never the EMS release. It is compared on its **major alone**, against
+`CONFIG_FORMAT_MAJOR` in `src/core/topology.ts`, and only ever to raise a warning: a drifted
+configuration still renders in full, because a major is the only notice a document gives that one
+of the twelve paths may have moved, and a moved path produces a plausible wrong table rather than a
+loud failure. The minor is deliberately not compared — it is additive by the EMS's own bump rule,
+so it cannot move a path read here, which is why the EMS warns about a newer minor and this does
+not. The constant is pinned to the major of the vendored worked example, not to a Python constant
+nothing here can read, and that pin is **weaker than `motrixStorageFormat`**: this file is vendored
+but not checksummed, so nothing forces the re-vendor. Acceptable only because nothing gates on it.
+**Do not turn the annotation into a refusal.**
+
 ### Live — the EMS REST API
 
 `GET /api/health`, `/api/devices`, `/api/devices/{name}`, `/api/workers`, and — on an EMS new

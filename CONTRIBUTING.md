@@ -43,6 +43,11 @@ private algorithm's parameters live. `test/topology.test.ts` and `test/topology.
 that no credential, host, topic or path can reach the parsed document or the rendered DOM.
 **Do not delete those tests**, and do not widen the allowlist without one that covers the new path.
 
+One of those twelve paths, `version`, is **compared** — its major only, against
+`CONFIG_FORMAT_MAJOR`, and only to raise a warning. That is not a widening: the comparison is a
+decision taken inside `parseTopology` and discarded, `TopologyDoc` gains no field, and a
+configuration of another major still renders in full. Do not turn it into a refusal.
+
 ## Set up
 
 ```bash

@@ -24,6 +24,11 @@ import type { SourceWarning } from '../sources/data-source.js';
  * Four of those paths reach inside an `options` object. They are named individually below;
  * everything else under any `options` — including every untyped key under an algorithm's,
  * which is where a private algorithm's parameters live — is never touched.
+ *
+ * The document's `version` is one of the twelve and is now **compared** — its major only,
+ * and only to raise a warning. That is not a widening: nothing about the comparison reaches
+ * the returned object, `TopologyDoc.version` is still the raw declared string, and the type
+ * gains no field. A decision is not data.
  */
 
 /** The five plugin axes a config declares, as they appear to a reader. */
@@ -59,11 +64,26 @@ export interface TopologyEntry {
 
 export interface TopologyDoc {
 	/**
-	 * Displayed verbatim, **never compared**.
+	 * Displayed verbatim; its **major alone** is compared, and only ever to annotate.
 	 *
-	 * `config/config.py` warns on any mismatch against its own `DEFAULT_VERSION` and carries a
-	 * TODO for real semver handling — the EMS's own worked example trips that warning. A gate
-	 * built on this field would be a gate on a value nobody can satisfy.
+	 * The EMS reads this as the version of the *config document format* — never its own
+	 * release — and `motrix-edge/config/version.py` holds the bump table. The viewer is not
+	 * entitled to as much from it, because it reads twelve named paths out of a file it did
+	 * not write: a minor that adds an option under `services` moves nothing here, and an
+	 * operator hand-editing a `1.0.0` file can break every path without touching the number.
+	 *
+	 * What a **major** is, is the only notice this document can give that a path below may
+	 * have moved — and a moved path does not fail loudly here, it produces a plausible,
+	 * wrong table: devices with null connectors, a burst of `configDanglingRef` blaming the
+	 * operator's configuration for a format change, `silent` badges on devices that are
+	 * reporting fine. So a `2.x` config still renders in full, with one sentence in the load
+	 * report saying an empty kind or an unresolved connector may be the format rather than
+	 * the configuration. That is an annotation, not a gate; nothing is refused and nothing
+	 * is hidden, which is the whole difference from the gate this comment used to rule out.
+	 *
+	 * Deliberately **not** parsed into this type. `TopologyDoc` gains no field: the
+	 * comparison is a decision taken inside `parseTopology` and then discarded, so the
+	 * surface stays exactly the twelve named paths it was.
 	 */
 	readonly version: string | null;
 	/** Null unless it is one of the three the EMS schema allows, so no arbitrary string renders. */
@@ -88,7 +108,65 @@ export const MAX_TOPOLOGY_ENTRIES = 2000;
 /** Bytes above which a `{`-leading file is refused unread. */
 export const MAX_CONFIG_BYTES = 2 * 1024 * 1024;
 
+/**
+ * The config-document format this module's twelve named paths were written against.
+ *
+ * Pinned to the major of the worked example the EMS publishes and this repository vendors
+ * — `test/topology.test.ts` asserts the pair — rather than to the EMS's own Python
+ * constant, which nothing here can read.
+ *
+ * **This pin is weaker than `motrixStorageFormat`, and the difference is worth knowing.**
+ * That one is declaration-to-declaration: the EMS *declares* `storage_format_version` in
+ * `examples/MANIFEST.json` and `test/fixtures.test.ts` fails the build against it. This one
+ * is constant-to-sample — `auto_toggle/config.json` is not checksummed by that manifest,
+ * `scripts/update-fixtures.mjs` copies it in the authored tier, and nothing forces the
+ * re-vendor. So a bump on the EMS side reaches this constant only when somebody re-vendors.
+ * That is tolerable precisely because nothing here gates on it: the cost of noticing late
+ * is one missing sentence in a load report, not a misparsed file.
+ */
+export const CONFIG_FORMAT_MAJOR = 1;
+
 const ENV_VALUES = new Set(['prod', 'test', 'dev']);
+
+/**
+ * `^\d+\.\d+\.\d+$` — exactly `config.schema.json`'s grammar, and not one character wider.
+ *
+ * Stricter than semver.org on purpose (no pre-release, no build metadata) because the EMS
+ * pattern is, and more tolerant than semver.org about leading zeros for the same reason:
+ * `01.0.0` is schema-valid there, so refusing it here would produce silence about a file
+ * the EMS accepts.
+ *
+ * The one place it is narrower is component length. The EMS pattern bounds nothing, but
+ * `config/version.py` bounds each component to nine digits — `int()` raises above
+ * `sys.get_int_max_str_digits()`, and that loader promises never to raise — so this carries
+ * the same bound to keep the two implementations agreeing on every input rather than only
+ * on realistic ones. `CLAUDE.md`'s rule about a deliberate second implementation of a
+ * Python rule is what this is: acceptable, as long as it cannot drift silently.
+ *
+ * `\d` here is ECMA-262's, so it is exactly `[0-9]` — which is also what the EMS's own
+ * JSON Schema pattern means, JSON Schema regexes being ECMA-262. `config/version.py` spells
+ * `[0-9]` out for that reason: Python's `\d` is Unicode-aware, so left as `\d` it would read
+ * `٢.٠.٠` as a major of 2 and log an error about a document this would say nothing about.
+ */
+const CONFIG_VERSION_PATTERN = /^(\d{1,9})\.(\d{1,9})\.(\d{1,9})$/;
+
+/**
+ * The declared version as three numbers, or null when there is no version to read.
+ *
+ * Null is how this says *I did not read a version*, and the caller's answer to that is
+ * silence plus the verbatim display — today's behaviour, preserved for every input the
+ * comparison cannot honestly cover. Being any more tolerant would mean reading a major out
+ * of a string the EMS's own validator would have rejected and then warning an operator
+ * about a number this module invented.
+ *
+ * Exported for `test/topology.test.ts` only, the way `looksLikeConfigJson` is.
+ */
+export function parseConfigVersion(value: unknown): { major: number; minor: number; patch: number } | null {
+	if (typeof value !== 'string') return null;
+	const match = CONFIG_VERSION_PATTERN.exec(value);
+	if (match === null) return null;
+	return { major: Number(match[1]), minor: Number(match[2]), patch: Number(match[3]) };
+}
 
 /**
  * Whether this text looks like a JSON config rather than a CSV.
@@ -253,10 +331,29 @@ export function parseTopology(text: string): TopologyParse {
 		}
 	}
 
+	const declaredVersion = stringOrNull(root['version']);
+	const parsedVersion = parseConfigVersion(declaredVersion);
+	if (parsedVersion !== null && parsedVersion.major !== CONFIG_FORMAT_MAJOR) {
+		// First, not last. The panel renders `warnings` in array order, and this note is the
+		// frame for everything under it — an unresolved connector may be the format rather
+		// than the configuration — so a reader who meets it last has already blamed the
+		// wrong thing. Built here rather than earlier because it needs nothing from the walk,
+		// and after the `!recognised` refusal above deliberately: a document this cannot
+		// describe at all gets one reason, not two.
+		//
+		// The minor is not compared. A minor is additive by the EMS's own bump rule, so it
+		// cannot move a path this module already reads — which is the only thing a version
+		// can tell this module. The EMS does warn about a newer minor, because unlike this
+		// it reads every key in the file and can have ignored one.
+		warnings.unshift(
+			warn('configVersionDrift', { declared: declaredVersion!, supported: String(CONFIG_FORMAT_MAJOR) }),
+		);
+	}
+
 	const env = stringOrNull(root['env']);
 	return {
 		doc: {
-			version: stringOrNull(root['version']),
+			version: declaredVersion,
 			env: env !== null && ENV_VALUES.has(env) ? (env as TopologyDoc['env']) : null,
 			entries,
 		},

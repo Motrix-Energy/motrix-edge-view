@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+	CONFIG_FORMAT_MAJOR,
 	MAX_TOPOLOGY_ENTRIES,
 	looksLikeConfigJson,
 	matchTopology,
+	parseConfigVersion,
 	parseTopology,
 	type SeenActors,
 	type TopologyDoc,
@@ -75,10 +77,16 @@ describe('parseTopology, against the EMS’s own worked example', () => {
 		expect(parseTopology(text).warnings).toEqual([]);
 	});
 
-	it('reads the version without ever comparing it', () => {
-		// config.py's own version check is a TODO that warns on any mismatch — the EMS's worked
-		// example trips it. Displaying the string is honest; gating on it would not be.
+	it('reads the version, and pins this viewer to the major the EMS ships', () => {
+		// This is the pin. A failure here means the EMS moved its config format: read
+		// `config.schema.json` and `config/version.py` there, check that the twelve named
+		// paths this module reads are still where they were, then move CONFIG_FORMAT_MAJOR.
+		// Same instruction-carrying role as test/fixtures.test.ts's storage-format assertion,
+		// and weaker in the same way — this file is vendored, not checksummed, so nothing
+		// forces the re-vendor that would bring a bump here. Nothing gates on it, which is
+		// what makes that acceptable.
 		expect(doc(text).version).toBe('1.0.0');
+		expect(parseConfigVersion(doc(text).version)?.major).toBe(CONFIG_FORMAT_MAJOR);
 		expect(doc(text).env).toBe('dev');
 	});
 });
@@ -338,5 +346,138 @@ describe('matchTopology', () => {
 		const match = matchTopology(doc(text), seen({ readings: new Set(['p1_meter ']) }));
 		expect(match.rows.find((row) => row.entry.name === 'p1_meter')?.status).toBe('silent');
 		expect(match.undeclared).toContain('p1_meter ');
+	});
+});
+
+describe('parseConfigVersion', () => {
+	it('reads exactly the grammar config.schema.json allows', () => {
+		expect(parseConfigVersion('1.0.0')).toEqual({ major: 1, minor: 0, patch: 0 });
+		expect(parseConfigVersion('10.20.30')).toEqual({ major: 10, minor: 20, patch: 30 });
+		// Leading zeros: the EMS pattern accepts them, so refusing here would mean silence
+		// about a file the EMS reads perfectly.
+		expect(parseConfigVersion('01.02.03')).toEqual({ major: 1, minor: 2, patch: 3 });
+	});
+
+	it('refuses anything the EMS schema would have refused, rather than guessing a major', () => {
+		for (const value of [
+			'v1.0.0',
+			'1.0',
+			'1.0.0.0',
+			'1.0.0-rc1',
+			'1.0.0+build',
+			' 1.0.0',
+			'1.0.0 ',
+			'',
+			'${CONFIG_VERSION}',
+			null,
+			undefined,
+			2,
+			{},
+		]) {
+			expect(parseConfigVersion(value), String(value)).toBeNull();
+		}
+	});
+
+	it('reads only ASCII digits, matching config.schema.json and the Python parser', () => {
+		// JSON Schema regexes are ECMA-262, so the EMS schema's \d is [0-9] and this must be
+		// too. config/version.py spells [0-9] out because Python's \d is Unicode-aware — left
+		// as \d it would read this as major 2 and log an error about a file this says nothing
+		// about, which is exactly the divergence both parsers claim cannot happen.
+		expect(parseConfigVersion('٢.٠.٠')).toBeNull();
+		expect(parseConfigVersion('２.0.0')).toBeNull();
+	});
+
+	it('refuses a component too long to be a number, matching the Python parser bound', () => {
+		// config/version.py bounds each component to nine digits because int() raises above
+		// sys.get_int_max_str_digits(). Carrying the same bound is what keeps the two
+		// implementations agreeing on every input rather than only on realistic ones.
+		expect(parseConfigVersion(`${'1'.repeat(4400)}.0.0`)).toBeNull();
+	});
+});
+
+describe('the declared configuration version', () => {
+	const config = (version: unknown) =>
+		JSON.stringify({ version, devices: [{ name: 'p1_meter', kind: 'p1' }] });
+
+	it('says nothing about a configuration on this viewer’s major', () => {
+		// A minor is additive by the EMS's bump rule, so it cannot move a path read here —
+		// this guards the off-by-one where the comparison reaches past the major.
+		for (const version of ['1.0.0', '1.4.2', '1.0.9']) {
+			expect(parseTopology(config(version)).warnings, version).toEqual([]);
+		}
+	});
+
+	it('notes a major it was not written for, and reads every entry anyway', () => {
+		const text = JSON.stringify({
+			version: '2.0.0',
+			connectors: [{ name: 'replay', protocol: 'pseudo', options: { emulates: 'mqtt' } }],
+			devices: [{ name: 'p1_meter', kind: 'p1', options: { connector_options: { name: 'replay' } } }],
+		});
+		const parsed = parseTopology(text);
+		expect(parsed.warnings.map((warning) => warning.detail)).toEqual(['configVersionDrift']);
+		// The half that matters: annotated, never refused.
+		expect(parsed.doc).not.toBeNull();
+		expect(parsed.doc?.version).toBe('2.0.0');
+		expect(parsed.doc?.entries).toHaveLength(2);
+		expect(parsed.doc?.entries.find((entry) => entry.role === 'device')?.protocol).toBe('mqtt');
+	});
+
+	it('notes a major behind this viewer as readily as one ahead', () => {
+		// The rule is inequality, not "older than". A 0.x document is as unreadable a promise
+		// as a 2.x one, and the EMS treats both as an error too.
+		expect(parseTopology(config('0.9.0')).warnings.map((w) => w.detail)).toEqual(['configVersionDrift']);
+	});
+
+	it('carries both versions as params and no sample', () => {
+		const warning = parseTopology(config('2.0.0')).warnings[0]!;
+		expect(warning.code).toBe('CONFIG_SHAPE');
+		expect(warning.params).toEqual({ declared: '2.0.0', supported: String(CONFIG_FORMAT_MAJOR) });
+		// `sample` is documented as "the offending cell"; a version is neither a cell nor an
+		// operator-chosen name, and the string is already in params.
+		expect(warning.sample).toBeNull();
+		expect(warning.row).toBeNull();
+	});
+
+	it('says nothing about a version it could not read, because it did not read one', () => {
+		// The panel prints the string verbatim either way, so the display is the
+		// disambiguation. A second sentence would be the viewer talking about a field it
+		// declined to read — and `${...}` is a legal, intended template in this file.
+		for (const version of ['${CONFIG_VERSION}', 'v2.0.0', '2.0', '2.0.0-rc1', '2.0.0+build', 2.0, '', null]) {
+			expect(parseTopology(config(version)).warnings, String(version)).toEqual([]);
+		}
+		expect(parseTopology(JSON.stringify({ devices: [{ name: 'p1_meter', kind: 'p1' }] })).warnings).toEqual([]);
+	});
+
+	it('round-trips the declared string verbatim whatever the verdict', () => {
+		expect(parseTopology(config('2.0.0')).doc?.version).toBe('2.0.0');
+		expect(parseTopology(config('v2.0.0')).doc?.version).toBe('v2.0.0');
+		expect(parseTopology(config(2.0)).doc?.version).toBeNull();
+		expect(parseTopology(config('')).doc?.version).toBeNull();
+	});
+
+	it('puts the note first, so it frames the warnings under it', () => {
+		// A reader who meets the frame last has already blamed the configuration for what may
+		// be a format change.
+		const text = JSON.stringify({
+			version: '2.0.0',
+			devices: [{ name: 'p1_meter', kind: 'p1', options: { connector_options: { name: 'ghost' } } }],
+		});
+		expect(parseTopology(text).warnings.map((warning) => warning.detail)).toEqual([
+			'configVersionDrift',
+			'configDanglingRef',
+		]);
+	});
+
+	it('does not note the version of a document it refuses', () => {
+		// A file this cannot describe at all gets one reason, not two.
+		const parsed = parseTopology(JSON.stringify({ version: '2.0.0', name: 'a package.json' }));
+		expect(parsed.doc).toBeNull();
+		expect(parsed.warnings.map((warning) => warning.detail)).toEqual(['configUnknownShape']);
+	});
+
+	it('adds no field to the document by comparing the version', () => {
+		// The comparison is a decision, not data: the returned surface must stay exactly
+		// where it was.
+		expect(Object.keys(parseTopology(config('2.0.0')).doc!).sort()).toEqual(['entries', 'env', 'version']);
 	});
 });

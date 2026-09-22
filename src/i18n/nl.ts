@@ -305,6 +305,8 @@ export const nl = {
 		'Twee items in {section} heten allebei “{name}”. Het eerste wordt gebruikt, net als de EMS doet.',
 	'warning.configDanglingRef':
 		'“{name}” verwijst naar “{missing}”, dat deze configuratie niet declareert.',
+	'warning.configVersionDrift':
+		'Deze configuratie declareert versie {declared}, terwijl deze viewer configuraties van versie {supported}.x leest. De versie alleen heeft niets geweigerd of verborgen: een hoofdversie is de enige aanwijzing die een configuratie geeft dat een veld dat de viewer leest verplaatst kan zijn, dus een lege soort of een onopgeloste connector hieronder kan aan de versie liggen in plaats van aan de configuratie.',
 	'warning.configTruncated':
 		'Alleen de eerste {n} items zijn gelezen. Een configuratie van deze omvang valt buiten wat deze viewer kan beschrijven.',
 	'warning.decisionsReset':

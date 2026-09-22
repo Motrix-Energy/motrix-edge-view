@@ -103,6 +103,28 @@ describe('<motrix-topology-panel> and the drop routing', () => {
 			expect(element!.shadowRoot?.querySelector('details')).toBeNull();
 		});
 
+		it('shows the version note in the panel, beside the version it still prints verbatim', async () => {
+			// The whole feature reaches the screen through the load-report seam that already
+			// existed: `parseTopology` returns the warning, the panel maps every warning
+			// through `warningText()`. No component change, and a drifted config is still a
+			// usable overlay rather than a refusal.
+			const drifted = CONFIG().replace('"version": "1.0.0"', '"version": "2.0.0"');
+			expect(drifted).toContain('"version": "2.0.0"');
+			await app.store.addDropped(file('config.json', drifted));
+			await settle();
+			// Assert the summary's own node, not the flat panel text: the warning sentence
+			// contains the version string too, so `toContain('2.0.0')` over the whole panel
+			// would stay green with the verbatim display deleted — and that display is what
+			// makes an unreadable version legible, since the parser stays silent about it.
+			const summary = panel()!.shadowRoot!.querySelector('summary .meta')?.textContent ?? '';
+			expect(summary).toContain('version 2.0.0');
+			const text = await panelText();
+			expect(text).toContain('a major version is the only notice');
+			for (const name of ['p1_meter', 'shelly_plug', 'pseudo_sensor', 'AutoToggle', 'replay']) {
+				expect(text).toContain(name);
+			}
+		});
+
 		it('lists the declared topology before any CSV is loaded', async () => {
 			await app.store.addDropped(file('config.json', CONFIG()));
 			await settle();

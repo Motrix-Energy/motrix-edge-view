@@ -326,6 +326,8 @@ export const en = {
 		'This configuration is too large to read. A config.json is a few kilobytes; something much bigger is almost certainly a different file.',
 	'warning.configDuplicateName': 'Two entries in {section} are both named “{name}”. The first is used, as the EMS does.',
 	'warning.configDanglingRef': '“{name}” refers to “{missing}”, which this configuration does not declare.',
+	'warning.configVersionDrift':
+		'This configuration declares version {declared}, and this viewer reads configurations of version {supported}.x. The version alone caused nothing to be refused or hidden: a major version is the only notice a configuration gives that a field this viewer reads may have moved, so an empty kind or an unresolved connector below may be the version rather than the configuration.',
 	'warning.configTruncated':
 		'Only the first {n} entries were read. A configuration this large is outside anything this viewer is built to describe.',
 	'warning.decisionsReset':

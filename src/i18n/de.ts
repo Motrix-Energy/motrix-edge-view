@@ -307,6 +307,8 @@ export const de = {
 		'Zwei Einträge in {section} heißen beide „{name}“. Der erste wird verwendet, so wie es das EMS tut.',
 	'warning.configDanglingRef':
 		'„{name}“ verweist auf „{missing}“, was diese Konfiguration nicht deklariert.',
+	'warning.configVersionDrift':
+		'Diese Konfiguration deklariert Version {declared}, dieser Viewer liest Konfigurationen der Version {supported}.x. Die Version allein hat nichts abgelehnt oder verborgen: eine Hauptversion ist der einzige Hinweis einer Konfiguration darauf, dass ein vom Viewer gelesenes Feld verschoben sein könnte — eine leere Art oder ein nicht aufgelöster Konnektor unten kann also an der Version liegen statt an der Konfiguration.',
 	'warning.configTruncated':
 		'Nur die ersten {n} Einträge wurden gelesen. Eine Konfiguration dieser Größe liegt außerhalb dessen, was dieser Viewer beschreiben soll.',
 	'warning.decisionsReset':
