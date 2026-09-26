@@ -32,7 +32,7 @@ export default defineConfig({
 	server: {
 		port: 5173,
 		proxy: {
-			// The dev-side twin of docker/nginx.conf's `proxy_pass http://edge:8000/`.
+			// The dev-side twin of docker/nginx.conf's `/api` location and its `rewrite`.
 			// The EMS serves bare /health, /devices, /workers — FastAPI's root_path only
 			// relabels /docs and /openapi.json, it does not remount the routes — so the
 			// /api prefix has to be stripped here exactly as nginx strips it there.

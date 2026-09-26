@@ -33,6 +33,12 @@ COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
 # the entrypoint, and nginx then starts with the empty .htpasswd below — 401 for everyone,
 # with nothing but one log line to say why. This repo is developed on Windows.
 COPY --chmod=0755 docker/docker-entrypoint.d/40-viewer-auth.sh /docker-entrypoint.d/40-viewer-auth.sh
+# Line endings normalised here for the same reason, and just as silently fatal. .gitattributes
+# makes a fresh clone LF, but the build context is the WORKING TREE, and a Windows editor or an
+# old checkout can leave the hook CRLF there. Its shebang then reads `#!/bin/sh\r`, the
+# entrypoint reports the hook "not found", and under `set -e` the container exits 127 before
+# nginx ever starts.
+RUN sed -i 's/\r$//' /docker-entrypoint.d/40-viewer-auth.sh
 
 # Created here, as root, and chowned to the runtime user (uid/gid 101 — verified, the group
 # is 101 and not 0 on this image). The hook then only ever *truncates* files it owns, which

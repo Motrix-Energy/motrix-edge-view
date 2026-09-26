@@ -163,6 +163,11 @@ docker run --rm -p 127.0.0.1:8080:8080 \
   motrix-edge-view
 ```
 
+Run like this, on its own, it is the file-mode viewer served over HTTP: open
+`http://localhost:8080` and drop your CSVs in. There is no EMS beside it, so `/api/*` answers
+502 and the app stays in file mode — the name `edge` is resolved per request, so its absence
+never stops nginx from starting.
+
 **Both variables are required.** The container exits non-zero rather than start without
 them: this nginx is the only authentication in front of the EMS, so an image that invented
 a default would be publishing that password in the same breath. If you want no gate at all,

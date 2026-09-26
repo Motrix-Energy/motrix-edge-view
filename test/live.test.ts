@@ -1644,7 +1644,8 @@ describe('normaliseDecisions', () => {
 		const ingestor = new Ingestor({ naiveZone: 'utc' });
 		let row = 0;
 		for (const record of live.records) {
-			ingestor.addAt(record.kind, record.actor, record.target, record.t, record.naive, record.raw, ++row);
+			// Exactly the call `LiveSource.emit` makes, prefix included.
+			ingestor.addAt(record.kind, record.actor, record.target, record.t, record.naive, record.raw, ++row, record.pathPrefix);
 		}
 
 		const shape = (event: NormalisedEvent) => ({
@@ -1655,5 +1656,22 @@ describe('normaliseDecisions', () => {
 			preview: event.preview,
 		});
 		expect(ingestor.events.map(shape)).toEqual(rows.map(shape));
+		// And the same series: both paths qualify a decision's series by its target device, so
+		// a live dataset and a loaded CSV put the same decisions on the same chart line.
+		const catalogue = (fields: typeof ingestor.fields) =>
+			[...fields].map(([key, paths]) => [key, [...paths.keys()].sort()]).sort();
+		expect(catalogue(ingestor.fields)).toEqual(catalogue(fromFile.fields));
+	});
+
+	it('qualifies each decision’s series by the device it was sent to', () => {
+		const { records } = normaliseDecisions(
+			page([
+				{ ...decision(1, '20.00'), device: 'shelly_plug' },
+				{ ...decision(2, '15.97'), device: 'pseudo_sensor' },
+			]),
+			base,
+			0,
+		);
+		expect(records.map((record) => record.pathPrefix)).toEqual(['shelly_plug', 'pseudo_sensor']);
 	});
 });

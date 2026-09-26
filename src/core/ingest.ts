@@ -206,7 +206,8 @@ export class Ingestor {
 		/**
 		 * Prepended to every path this record discovers.
 		 *
-		 * Only the replay input uses it, to qualify paths by topic — see `CsvShape`. Applied in
+		 * The replay input uses it to qualify paths by topic, and decisions — file and live
+		 * alike — to qualify them by target device; see `CsvShape.targetQualifiesPath`. Applied in
 		 * the flatten *visitor* rather than seeded into the walk, so `core/flatten.ts` and its
 		 * documented path grammar are untouched by this feature.
 		 */

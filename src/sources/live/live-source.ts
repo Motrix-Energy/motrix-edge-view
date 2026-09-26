@@ -235,7 +235,7 @@ export class LiveSource implements DataSource {
 
 		this.pending.length = 0;
 		for (const record of records) {
-			this.ingestor.addAt(record.kind, record.actor, record.target, record.t, record.naive, record.raw, ++this.row);
+			this.ingestor.addAt(record.kind, record.actor, record.target, record.t, record.naive, record.raw, ++this.row, record.pathPrefix);
 		}
 		if (this.pending.length === 0) return;
 		// A fresh array, and `pending` left empty by the same call: the store takes ownership of

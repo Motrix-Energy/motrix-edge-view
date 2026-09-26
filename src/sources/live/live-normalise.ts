@@ -16,6 +16,13 @@ export interface LiveRecord {
 	readonly t: number;
 	readonly naive: boolean;
 	readonly raw: string;
+	/**
+	 * Prepended to every series path this record discovers — `Ingestor.addAt`'s `pathPrefix`.
+	 * Set only on decisions, to the target device, exactly as the file path does through
+	 * `DECISIONS.targetQualifiesPath`: the two must agree or a live dataset and a loaded CSV
+	 * name the same series differently.
+	 */
+	readonly pathPrefix?: string;
 }
 
 /** What each stream remembers between polls, so a repeat is recognisable as one. */
@@ -321,6 +328,9 @@ export function normaliseDecisions(
 			// file decisions merge" means — wrap it and the two paths produce different events
 			// for the same decision.
 			raw: decision.command,
+			// One series per device an algorithm commands, as `DECISIONS.targetQualifiesPath`
+			// does for the file path.
+			pathPrefix: decision.device,
 		});
 	}
 

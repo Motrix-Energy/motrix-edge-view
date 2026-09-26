@@ -26,11 +26,21 @@ export interface CsvShape {
 	/**
 	 * Whether the target column also qualifies the series path.
 	 *
-	 * True only for the replay input, and load-bearing there: one device publishes on several
-	 * topics with different payload shapes. `shelly_plug` sends a bare float on
-	 * `…/relay/0/power`, the word `off` on `…/relay/0` and another float on `…/temperature`.
-	 * Without the prefix all three land on one path, and the numeric majority vote calls the
-	 * mixture chartable — a series that silently interleaves 118.4 with a relay state.
+	 * Load-bearing wherever one actor sends differently-meant values under one path:
+	 *
+	 * - **The replay input**, where one device publishes on several topics with different
+	 *   payload shapes. `shelly_plug` sends a bare float on `…/relay/0/power`, the word `off` on
+	 *   `…/relay/0` and another float on `…/temperature`. Without the prefix all three land on
+	 *   one path, and the numeric majority vote calls the mixture chartable — a series that
+	 *   silently interleaves 118.4 with a relay state.
+	 * - **Decisions**, where one algorithm commands several devices. An algorithm sending one
+	 *   setpoint to `shelly_plug` and a different one to `pseudo_sensor` every step would
+	 *   otherwise chart as one series zigzagging between the two. Qualified, each device is its
+	 *   own series: `shelly_plug` for a bare command, `shelly_plug.setpoint` for a JSON one. The live
+	 *   source qualifies decisions the same way (`normaliseDecisions`), so a live dataset and
+	 *   a loaded CSV still name the same series identically.
+	 *
+	 * False for readings: the actor already *is* the device.
 	 */
 	readonly targetQualifiesPath: boolean;
 }
@@ -54,7 +64,7 @@ export const DECISIONS: CsvShape = {
 	actorColumn: 'algorithm',
 	targetColumn: 'device',
 	payloadColumn: 'command',
-	targetQualifiesPath: false,
+	targetQualifiesPath: true,
 };
 
 /**

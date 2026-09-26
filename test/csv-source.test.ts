@@ -262,6 +262,46 @@ describe('parseCsvText — the golden decisions fixture', () => {
 		const commands = result.events.map((e) => e.raw);
 		expect(commands.indexOf('off')).toBeLessThan(commands.indexOf('on'));
 	});
+
+	it('names each of its series after the device the command went to', () => {
+		const targets = new Set(result.events.map((event) => event.target));
+		const paths = [...result.fields.get(actorKey('decision', 'AutoToggle'))!.keys()];
+		expect(paths.length).toBeGreaterThan(0);
+		expect(paths.every((path) => targets.has(path))).toBe(true);
+	});
+});
+
+describe('parseCsvText — one algorithm commanding several devices', () => {
+	// One algorithm sends a numeric setpoint to two devices every step, and a JSON command to a
+	// third. Unqualified, the first two shared the algorithm's root path and charted as one
+	// series zigzagging between them.
+	const csv = [
+		'timestamp,algorithm,device,command',
+		'2024-01-15T10:00:00,AutoToggle,shelly_plug,20.00',
+		'2024-01-15T10:00:00,AutoToggle,pseudo_sensor,15.97',
+		'2024-01-15T10:00:00,AutoToggle,p1_meter,"{""setpoint"": 21.5}"',
+		'2024-01-15T10:15:00,AutoToggle,shelly_plug,nan',
+		'2024-01-15T10:15:00,AutoToggle,pseudo_sensor,22.13',
+		'2024-01-15T10:15:00,AutoToggle,p1_meter,"{""setpoint"": 22}"',
+	].join('\r\n');
+	const result = parseCsvText(csv);
+	const paths = result.fields.get(actorKey('decision', 'AutoToggle'))!;
+
+	it('gives each commanded device its own series', () => {
+		expect([...paths.keys()].sort()).toEqual(['p1_meter.setpoint', 'pseudo_sensor', 'shelly_plug']);
+	});
+
+	it('keeps each series numeric, a nan setpoint included', () => {
+		// `nan` is numeric in kind with no value: a gap in the line, not a string that would
+		// demote the whole series from the charts.
+		for (const path of ['p1_meter.setpoint', 'pseudo_sensor', 'shelly_plug']) {
+			expect(paths.get(path)).toMatchObject({ observed: 2, numeric: 2 });
+		}
+	});
+
+	it('still carries the device as the event target', () => {
+		expect(result.events.map((event) => event.target)).toEqual(['shelly_plug', 'pseudo_sensor', 'p1_meter', 'shelly_plug', 'pseudo_sensor', 'p1_meter']);
+	});
 });
 
 describe('parseCsvText — the adversarial fixture', () => {
